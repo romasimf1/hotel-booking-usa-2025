@@ -156,8 +156,58 @@ function openBookingModal(hotel) {
     document.getElementById('hotelId').value = hotel.id;
     document.getElementById('hotelName').value = hotel.name;
 
+    // Устанавливаем ограничения на даты
+    setDateConstraints();
+
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
+}
+
+// Установка ограничений на даты
+function setDateConstraints() {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const checkInInput = document.getElementById('checkIn');
+    const checkOutInput = document.getElementById('checkOut');
+
+    // Форматируем даты в YYYY-MM-DD
+    const todayStr = today.toISOString().split('T')[0];
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    // Устанавливаем минимальную дату для check-in (сегодня)
+    checkInInput.min = todayStr;
+    checkInInput.value = tomorrowStr; // По умолчанию завтра
+
+    // Устанавливаем минимальную дату для check-out (день после check-in)
+    checkOutInput.min = tomorrowStr;
+    checkOutInput.value = getDayAfter(tomorrowStr); // По умолчанию послезавтра
+
+    // Добавляем обработчик изменения даты check-in
+    checkInInput.addEventListener('change', function() {
+        updateCheckOutMin(this.value);
+    });
+}
+
+// Получить дату на следующий день после указанной
+function getDayAfter(dateStr) {
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+}
+
+// Обновить минимальную дату для check-out
+function updateCheckOutMin(checkInDate) {
+    const checkOutInput = document.getElementById('checkOut');
+    const nextDay = getDayAfter(checkInDate);
+
+    checkOutInput.min = nextDay;
+
+    // Если текущая дата check-out раньше новой минимальной, обновляем её
+    if (checkOutInput.value < nextDay) {
+        checkOutInput.value = nextDay;
+    }
 }
 
 // Закрытие модального окна
@@ -170,6 +220,26 @@ function closeBookingModal() {
 // Обработчик отправки формы
 bookingForm.addEventListener('submit', async function(e) {
     e.preventDefault();
+
+    // Дополнительная валидация дат перед отправкой
+    const checkInDate = new Date(bookingForm.checkIn.value);
+    const checkOutDate = new Date(bookingForm.checkOut.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (checkInDate < today) {
+        showNotification('Check-in date cannot be in the past', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Booking';
+        return;
+    }
+
+    if (checkOutDate <= checkInDate) {
+        showNotification('Check-out date must be after check-in date', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Booking';
+        return;
+    }
 
     const submitBtn = document.querySelector('.submit-btn');
     submitBtn.disabled = true;
