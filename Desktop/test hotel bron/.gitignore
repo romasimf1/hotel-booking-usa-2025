@@ -38,3 +38,6 @@ build/
 # Cloudflare specific (for GitHub Pages deployment)
 wrangler.toml
 api/
+
+# Keep GitHub Actions
+!.github/
